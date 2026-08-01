@@ -29,6 +29,7 @@ export const deleteVideo = (videoId) => api.delete(`/videos/${videoId}`);
 
 export const getQueueStatus = () => api.get('/queue/status');
 export const retryClip = (clipId) => api.post(`/queue/retry/${clipId}`);
+export const resumeAllQueue = () => api.post('/queue/resume-all');
 
 export const getSettings = () => api.get('/settings');
 export const updateSettings = (data) => api.put('/settings', data);

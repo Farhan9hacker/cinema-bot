@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, RefreshCw } from 'lucide-react';
+import { Layers, RefreshCw, Play } from 'lucide-react';
 import QueueTable from '../components/QueueTable';
-import { getQueueStatus } from '../api/client';
+import { getQueueStatus, resumeAllQueue } from '../api/client';
 
 export default function Queue() {
   const [queueData, setQueueData] = useState({ summary: {}, active_items: [] });
   const [loading, setLoading] = useState(true);
+  const [resuming, setResuming] = useState(false);
 
   const fetchQueue = async () => {
     setLoading(true);
@@ -16,6 +17,18 @@ export default function Queue() {
       console.error('Failed to fetch queue:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResumeAll = async () => {
+    setResuming(true);
+    try {
+      await resumeAllQueue();
+      fetchQueue();
+    } catch (err) {
+      alert('Failed to resume queue: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -30,12 +43,22 @@ export default function Queue() {
           <h1 className="text-2xl font-black text-white tracking-tight">Upload & Render Queue</h1>
           <p className="text-xs text-gray-400 mt-1">Detailed view of active and pending clip rendering segments</p>
         </div>
-        <button
-          onClick={fetchQueue}
-          className="p-2.5 rounded-xl glass-panel border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleResumeAll}
+            disabled={resuming}
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl font-semibold text-xs text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/30 transition-all"
+          >
+            <Play className="w-4 h-4 fill-white" />
+            <span>{resuming ? 'Resuming...' : 'Start / Resume Transcoding'}</span>
+          </button>
+          <button
+            onClick={fetchQueue}
+            className="p-2.5 rounded-xl glass-panel border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Summary Row */}

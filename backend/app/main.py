@@ -42,6 +42,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Directory Watcher failed to start: {e}")
 
+    # 3. Auto-resume any pending or processing videos on startup
+    try:
+        from app.worker.tasks import resume_pending_tasks
+        resume_pending_tasks.delay()
+        logger.info("Triggered auto-resume for pending video jobs.")
+    except Exception as e:
+        logger.warning(f"Failed to trigger auto-resume task: {e}")
+
     yield
 
     # Shutdown logic

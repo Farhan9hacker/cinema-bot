@@ -63,3 +63,19 @@ async def retry_clip(clip_id: int, db: AsyncSession = Depends(get_db)):
     process_video_task.delay(clip.video_id)
 
     return clip
+
+
+@router.post("/resume-all")
+async def resume_all_queue(db: AsyncSession = Depends(get_db)):
+    """Re-trigger Celery worker tasks for all queued/processing videos."""
+    result = await db.execute(select(Video).where(Video.status.in_(["pending", "processing", "paused"])))
+    videos = result.scalars().all()
+
+    resumed_ids = []
+    for v in videos:
+        v.status = "processing"
+        process_video_task.delay(v.id)
+        resumed_ids.append(v.id)
+
+    await db.commit()
+    return {"message": f"Resumed processing for {len(resumed_ids)} videos.", "video_ids": resumed_ids}
