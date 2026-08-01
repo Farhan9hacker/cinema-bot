@@ -1,0 +1,64 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.config import settings as app_settings
+from app.models.models import Setting, SystemLog
+from app.schemas.schemas import SettingsSchema, SettingsUpdateSchema
+
+router = APIRouter(prefix="/settings", tags=["Settings"])
+
+
+@router.get("", response_model=SettingsSchema)
+async def get_settings(db: AsyncSession = Depends(get_db)):
+    """Retrieve application and video processing settings."""
+    result = await db.execute(select(Setting))
+    db_settings = result.scalars().all()
+    setting_map = {s.key: s.value for s in db_settings}
+
+    return SettingsSchema(
+        clip_length=int(setting_map.get("clip_length", app_settings.DEFAULT_CLIP_LENGTH)),
+        video_codec=setting_map.get("video_codec", app_settings.DEFAULT_VIDEO_CODEC),
+        bitrate=setting_map.get("bitrate", app_settings.DEFAULT_BITRATE),
+        resolution=setting_map.get("resolution", app_settings.DEFAULT_RESOLUTION),
+        fps=int(setting_map.get("fps", app_settings.DEFAULT_FPS)),
+        overlay_font=setting_map.get("overlay_font", app_settings.DEFAULT_OVERLAY_FONT),
+        overlay_size=int(setting_map.get("overlay_size", app_settings.DEFAULT_OVERLAY_SIZE)),
+        overlay_color=setting_map.get("overlay_color", app_settings.DEFAULT_OVERLAY_COLOR),
+        overlay_outline_color=setting_map.get("overlay_outline_color", app_settings.DEFAULT_OVERLAY_OUTLINE_COLOR),
+        overlay_outline_width=int(setting_map.get("overlay_outline_width", app_settings.DEFAULT_OVERLAY_OUTLINE_WIDTH)),
+        top_padding=int(setting_map.get("top_padding", app_settings.DEFAULT_TOP_PADDING)),
+        upload_schedule=setting_map.get("upload_schedule", "immediate"),
+        max_workers=int(setting_map.get("max_workers", app_settings.MAX_WORKERS))
+    )
+
+
+@router.put("", response_model=SettingsSchema)
+async def update_settings(
+    payload: SettingsUpdateSchema,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update dynamic settings in database."""
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if value is not None:
+            str_val = str(value)
+            result = await db.execute(select(Setting).where(Setting.key == key))
+            setting_obj = result.scalar_one_or_none()
+            if setting_obj:
+                setting_obj.value = str_val
+            else:
+                setting_obj = Setting(key=key, value=str_val)
+                db.add(setting_obj)
+
+    log_entry = SystemLog(
+        level="INFO",
+        category="settings",
+        message=f"Settings updated: {', '.join(update_data.keys())}"
+    )
+    db.add(log_entry)
+    await db.commit()
+
+    return await get_settings(db)
