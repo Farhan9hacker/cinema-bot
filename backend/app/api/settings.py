@@ -29,7 +29,13 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
         overlay_outline_color=setting_map.get("overlay_outline_color", app_settings.DEFAULT_OVERLAY_OUTLINE_COLOR),
         overlay_outline_width=int(setting_map.get("overlay_outline_width", app_settings.DEFAULT_OVERLAY_OUTLINE_WIDTH)),
         top_padding=int(setting_map.get("top_padding", app_settings.DEFAULT_TOP_PADDING)),
+        show_movie_title=setting_map.get("show_movie_title", "true").lower() == "true",
         upload_schedule=setting_map.get("upload_schedule", "immediate"),
+        upload_interval_mins=int(setting_map.get("upload_interval_mins", 30)),
+        auto_publish_youtube=setting_map.get("auto_publish_youtube", "true").lower() == "true",
+        auto_publish_tiktok=setting_map.get("auto_publish_tiktok", "true").lower() == "true",
+        auto_publish_instagram=setting_map.get("auto_publish_instagram", "false").lower() == "true",
+        auto_publish_facebook=setting_map.get("auto_publish_facebook", "false").lower() == "true",
         max_workers=int(setting_map.get("max_workers", app_settings.MAX_WORKERS))
     )
 

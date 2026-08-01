@@ -32,6 +32,7 @@ async def _get_settings_dict(session) -> dict:
         "overlay_outline_color": setting_map.get("overlay_outline_color", settings.DEFAULT_OVERLAY_OUTLINE_COLOR),
         "overlay_outline_width": int(setting_map.get("overlay_outline_width", settings.DEFAULT_OVERLAY_OUTLINE_WIDTH)),
         "top_padding": int(setting_map.get("top_padding", settings.DEFAULT_TOP_PADDING)),
+        "show_movie_title": setting_map.get("show_movie_title", "true").lower() == "true",
     }
 
 
@@ -120,7 +121,8 @@ async def _process_video_async(video_id: int):
                     font_color=current_settings["overlay_color"],
                     outline_color=current_settings["overlay_outline_color"],
                     outline_width=current_settings["overlay_outline_width"],
-                    top_padding=current_settings["top_padding"]
+                    top_padding=current_settings["top_padding"],
+                    show_movie_title=current_settings["show_movie_title"]
                 )
 
                 if render_ok and os.path.exists(clip.output_path) and os.path.getsize(clip.output_path) > 0:

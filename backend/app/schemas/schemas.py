@@ -75,7 +75,13 @@ class SettingsSchema(BaseModel):
     overlay_outline_color: str = Field(default="black", description="Text outline border color")
     overlay_outline_width: int = Field(default=4, description="Outline border width")
     top_padding: int = Field(default=120, description="Top padding from screen top")
-    upload_schedule: str = Field(default="immediate", description="Upload schedule: immediate, hourly, daily")
+    show_movie_title: bool = Field(default=True, description="Show movie title text on overlay")
+    upload_schedule: str = Field(default="immediate", description="Upload schedule: immediate, hourly, daily, custom_interval")
+    upload_interval_mins: int = Field(default=30, description="Delay between clip uploads in minutes")
+    auto_publish_youtube: bool = Field(default=True, description="Auto-publish to YouTube Shorts")
+    auto_publish_tiktok: bool = Field(default=True, description="Auto-publish to TikTok")
+    auto_publish_instagram: bool = Field(default=False, description="Auto-publish to Instagram Reels")
+    auto_publish_facebook: bool = Field(default=False, description="Auto-publish to Facebook Reels")
     max_workers: int = Field(default=0, description="Concurrency level (0 = auto CPU thread count)")
 
 
@@ -91,7 +97,13 @@ class SettingsUpdateSchema(BaseModel):
     overlay_outline_color: Optional[str] = None
     overlay_outline_width: Optional[int] = None
     top_padding: Optional[int] = None
+    show_movie_title: Optional[bool] = None
     upload_schedule: Optional[str] = None
+    upload_interval_mins: Optional[int] = None
+    auto_publish_youtube: Optional[bool] = None
+    auto_publish_tiktok: Optional[bool] = None
+    auto_publish_instagram: Optional[bool] = None
+    auto_publish_facebook: Optional[bool] = None
     max_workers: Optional[int] = None
 
 

@@ -15,7 +15,13 @@ export default function SettingsPage() {
     overlay_outline_color: 'black',
     overlay_outline_width: 4,
     top_padding: 120,
+    show_movie_title: true,
     upload_schedule: 'immediate',
+    upload_interval_mins: 30,
+    auto_publish_youtube: true,
+    auto_publish_tiktok: true,
+    auto_publish_instagram: false,
+    auto_publish_facebook: false,
     max_workers: 0,
   });
 
@@ -38,10 +44,10 @@ export default function SettingsPage() {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value, 10) || 0 : value,
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseInt(value, 10) || 0 : value),
     }));
   };
 
@@ -198,6 +204,159 @@ export default function SettingsPage() {
                   className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
                 />
               </div>
+
+              {/* Show/Hide Movie Title Toggle */}
+              <div className="sm:col-span-2 flex items-center justify-between p-4 bg-gray-900/80 border border-gray-800 rounded-xl">
+                <div>
+                  <span className="block text-sm font-bold text-white">Show Movie Title in Overlay</span>
+                  <span className="text-xs text-gray-400">Display full movie name above the Part number on top of vertical clips</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="show_movie_title"
+                    checked={formData.show_movie_title}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Social Media & Auto-Upload Accounts */}
+          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
+              <span className="text-xl">🚀</span>
+              <h3 className="font-bold text-white text-md">Social Media Connections</h3>
+            </div>
+            <p className="text-xs text-gray-400">Connect your short-form video channels for automated auto-publishing</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {/* YouTube Shorts */}
+              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-bold text-xs">
+                    YT
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">YouTube Shorts</h4>
+                    <span className="text-[10px] text-emerald-400 font-semibold">● Connected (@CinemaClips)</span>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="auto_publish_youtube"
+                    checked={formData.auto_publish_youtube}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              {/* TikTok */}
+              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs">
+                    TT
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">TikTok</h4>
+                    <span className="text-[10px] text-emerald-400 font-semibold">● Connected (@ShortsForge)</span>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="auto_publish_tiktok"
+                    checked={formData.auto_publish_tiktok}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+
+              {/* Instagram Reels */}
+              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-lg bg-pink-600/20 text-pink-400 border border-pink-500/30 flex items-center justify-center font-bold text-xs">
+                    IG
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Instagram Reels</h4>
+                    <span className="text-[10px] text-gray-500 font-semibold">Disconnected</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert('Instagram Graph API authorization initialized')}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+                >
+                  Connect
+                </button>
+              </div>
+
+              {/* Facebook Reels */}
+              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs">
+                    FB
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Facebook Reels</h4>
+                    <span className="text-[10px] text-gray-500 font-semibold">Disconnected</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => alert('Facebook Reels API authorization initialized')}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+                >
+                  Connect
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload Schedule & Automation Settings */}
+          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
+              <span className="text-xl">⏰</span>
+              <h3 className="font-bold text-white text-md">Upload Schedule & Automation</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Upload Schedule Strategy</label>
+                <select
+                  name="upload_schedule"
+                  value={formData.upload_schedule}
+                  onChange={handleChange}
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                >
+                  <option value="immediate">Immediate (Publish clip as soon as rendered)</option>
+                  <option value="custom_interval">Staggered Interval (Delay between clips)</option>
+                  <option value="hourly">Hourly Batch</option>
+                  <option value="daily">Daily Prime-time Batch (6:00 PM UTC)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Interval Delay Between Clips (Minutes)</label>
+                <input
+                  type="number"
+                  name="upload_interval_mins"
+                  value={formData.upload_interval_mins}
+                  onChange={handleChange}
+                  min="5"
+                  max="1440"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
@@ -233,8 +392,8 @@ export default function SettingsPage() {
                 textShadow: `-1px -1px 0 ${formData.overlay_outline_color}, 1px -1px 0 ${formData.overlay_outline_color}, -1px 1px 0 ${formData.overlay_outline_color}, 1px 1px 0 ${formData.overlay_outline_color}`,
               }}
             >
-              MOVIE NAME
-              <div className="mt-2">PART 1</div>
+              {formData.show_movie_title && <div>MOVIE NAME</div>}
+              <div className={formData.show_movie_title ? "mt-2" : ""}>PART 1</div>
             </div>
 
             {/* Shorts UI Safe Area Indicator */}

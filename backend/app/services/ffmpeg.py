@@ -122,7 +122,8 @@ class FFmpegService:
         font_color: str = "white",
         outline_color: str = "black",
         outline_width: int = 4,
-        top_padding: int = 120
+        top_padding: int = 120,
+        show_movie_title: bool = True
     ) -> bool:
         """
         Transcode a segment into a vertical 9:16 MP4 clip with top title overlay using FFmpeg.
@@ -138,7 +139,10 @@ class FFmpegService:
         # Formatting titles
         title_text = cls.format_title_text(movie_title)
         part_text = f"PART {part_number}"
-        full_overlay_text = f"{title_text}\n\n{part_text}"
+        if show_movie_title:
+            full_overlay_text = f"{title_text}\n\n{part_text}"
+        else:
+            full_overlay_text = part_text
 
         # FFmpeg Video Filter chain:
         # Create blurred background + centered scaled foreground + top title overlay

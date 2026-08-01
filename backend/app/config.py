@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     DEFAULT_OVERLAY_OUTLINE_COLOR: str = "black"
     DEFAULT_OVERLAY_OUTLINE_WIDTH: int = 4
     DEFAULT_TOP_PADDING: int = 120
+    DEFAULT_SHOW_MOVIE_TITLE: bool = True
+    DEFAULT_UPLOAD_SCHEDULE: str = "immediate"
+    DEFAULT_UPLOAD_INTERVAL_MINS: int = 30
+    DEFAULT_AUTO_PUBLISH_YOUTUBE: bool = True
+    DEFAULT_AUTO_PUBLISH_TIKTOK: bool = True
+    DEFAULT_AUTO_PUBLISH_INSTAGRAM: bool = False
+    DEFAULT_AUTO_PUBLISH_FACEBOOK: bool = False
     
     # System Safety
     SAFE_DISK_FREE_GB: float = 5.0
