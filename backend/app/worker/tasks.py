@@ -1,22 +1,27 @@
 import os
 import shutil
 import time
-import asyncio
 import logging
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+
 from app.worker.celery_app import celery_app
 from app.config import settings
-from app.database import AsyncSessionLocal
 from app.models.models import Video, Clip, Setting, SystemLog
 from app.services.ffmpeg import FFmpegService
 from app.services.sys_info import get_system_metrics
 
 logger = logging.getLogger("shortforge.tasks")
 
+# Create thread-safe synchronous database engine for Celery worker process
+sync_db_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace("sqlite+aiosqlite://", "sqlite://")
+sync_engine = create_engine(sync_db_url, pool_pre_ping=True)
+SyncSessionLocal = sessionmaker(bind=sync_engine, expire_on_commit=False)
 
-async def _get_settings_dict(session) -> dict:
-    """Fetch current dynamic settings from database or fallback to config defaults."""
-    result = await session.execute(select(Setting))
+
+def _get_settings_dict_sync(session) -> dict:
+    """Fetch current dynamic settings from database using synchronous session."""
+    result = session.execute(select(Setting))
     db_settings = result.scalars().all()
     setting_map = {s.key: s.value for s in db_settings}
 
@@ -36,18 +41,17 @@ async def _get_settings_dict(session) -> dict:
     }
 
 
-async def _process_video_async(video_id: int):
-    """Async core execution logic for processing a video."""
+def _process_video_sync(video_id: int):
+    """Synchronous core execution logic for processing a video in Celery worker."""
     start_time = time.time()
     
-    async with AsyncSessionLocal() as session:
+    with SyncSessionLocal() as session:
         # Check system safety - Disk space check
         metrics = get_system_metrics()
         if metrics["disk_free_gb"] < settings.SAFE_DISK_FREE_GB:
             logger.error(f"Disk space low ({metrics['disk_free_gb']} GB free). Pausing pipeline for video ID {video_id}.")
             
-            result = await session.execute(select(Video).where(Video.id == video_id))
-            video = result.scalar_one_or_none()
+            video = session.scalar(select(Video).where(Video.id == video_id))
             if video:
                 video.status = "paused"
                 video.error_message = f"Paused due to low disk space ({metrics['disk_free_gb']} GB free)."
@@ -58,21 +62,20 @@ async def _process_video_async(video_id: int):
                 message=f"Processing paused for Video ID {video_id}: Disk space critically low ({metrics['disk_free_gb']} GB free)."
             )
             session.add(log_entry)
-            await session.commit()
+            session.commit()
             return
 
         # Fetch video record
-        result = await session.execute(select(Video).where(Video.id == video_id))
-        video = result.scalar_one_or_none()
+        video = session.scalar(select(Video).where(Video.id == video_id))
         if not video or video.status == "paused":
             logger.info(f"Video ID {video_id} not found or paused, skipping processing.")
             return
 
         video.status = "processing"
-        await session.commit()
+        session.commit()
 
         # Fetch dynamic settings
-        current_settings = await _get_settings_dict(session)
+        current_settings = _get_settings_dict_sync(session)
 
         # Resolve font path
         font_name = current_settings["overlay_font"]
@@ -81,8 +84,9 @@ async def _process_video_async(video_id: int):
             font_path = None  # Fallback to system font if missing
 
         # Fetch clip segments for this video
-        result = await session.execute(select(Clip).where(Clip.video_id == video_id).order_by(Clip.part_number))
-        clips = result.scalars().all()
+        clips = session.scalars(
+            select(Clip).where(Clip.video_id == video_id).order_by(Clip.part_number)
+        ).all()
 
         total_clips = len(clips)
         completed_count = 0
@@ -97,7 +101,7 @@ async def _process_video_async(video_id: int):
 
             # Update status to rendering
             clip.status = "rendering"
-            await session.commit()
+            session.commit()
 
             success = False
             max_retries = 3
@@ -136,10 +140,10 @@ async def _process_video_async(video_id: int):
                     logger.warning(f"Part {clip.part_number} rendering attempt failed. Retry count: {clip.retry_count}")
                     if clip.retry_count > max_retries:
                         clip.status = "failed"
-                        clip.error_message = "FFmpeg transcoding failed after 3 retries."
+                        clip.error_message = "FFmpeg transcoding failed after retries."
                         failed_count += 1
 
-                await session.commit()
+                session.commit()
 
         encoding_time = round(time.time() - start_time, 2)
 
@@ -172,7 +176,7 @@ async def _process_video_async(video_id: int):
             )
 
         session.add(log_entry)
-        await session.commit()
+        session.commit()
 
 
 @celery_app.task(name="process_video_task", bind=True, max_retries=3)
@@ -180,7 +184,7 @@ def process_video_task(self, video_id: int):
     """Celery task entry point to process a long-form video."""
     logger.info(f"Celery worker received process_video_task for Video ID {video_id}")
     try:
-        asyncio.run(_process_video_async(video_id))
+        _process_video_sync(video_id)
     except Exception as exc:
         logger.error(f"Task process_video_task failed for Video ID {video_id}: {exc}", exc_info=True)
         raise self.retry(exc=exc, countdown=10)
@@ -189,17 +193,13 @@ def process_video_task(self, video_id: int):
 @celery_app.task(name="resume_pending_tasks")
 def resume_pending_tasks():
     """Periodic auto-recovery task to resume unfinished jobs after system reboot."""
-    async def _resume():
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
+    try:
+        with SyncSessionLocal() as session:
+            unprocessed_videos = session.scalars(
                 select(Video).where(Video.status.in_(["pending", "processing"]))
-            )
-            unprocessed_videos = result.scalars().all()
+            ).all()
             for v in unprocessed_videos:
                 logger.info(f"Auto-resuming video ID {v.id} ('{v.filename}') after system reboot.")
                 process_video_task.delay(v.id)
-
-    try:
-        asyncio.run(_resume())
     except Exception as e:
         logger.error(f"Failed to execute resume_pending_tasks: {e}")
