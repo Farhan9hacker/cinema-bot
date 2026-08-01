@@ -13,6 +13,9 @@ class FFmpegService:
     """Service to handle video metadata extraction and 9:16 clip transcoding via FFmpeg."""
 
     @staticmethod
+    static_methods = None
+
+    @staticmethod
     def get_metadata(video_path: str) -> Dict[str, Any]:
         """Extract metadata from video file using ffprobe."""
         if not os.path.exists(video_path):
@@ -63,13 +66,11 @@ class FFmpegService:
                 "codec": codec
             }
         except (subprocess.SubprocessError, json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"ffprobe failed or not available for {video_path}: {e}. Returning fallback metadata.")
-            # Fallback estimation for missing ffprobe or unparseable video
+            logger.warning(f"ffprobe failed for {video_path}: {e}. Returning fallback metadata.")
             file_size = os.path.getsize(video_path) if os.path.exists(video_path) else 0
-            estimated_duration = max(1.0, float(file_size) / (1024 * 1024 * 2))  # Rough estimate
             return {
                 "filename": os.path.basename(video_path),
-                "duration": round(estimated_duration, 2),
+                "duration": 0.0,
                 "resolution": "1920x1080",
                 "width": 1920,
                 "height": 1080,
@@ -98,8 +99,9 @@ class FFmpegService:
     def format_title_text(filename: str) -> str:
         """Sanitize and format title text for FFmpeg drawtext filter."""
         clean_name = Path(filename).stem
-        # Replace underscores and hyphens with spaces
-        clean_name = clean_name.replace("_", " ").replace("-", " ").strip().upper()
+        clean_name = clean_name.replace("_", " ").replace("-", " ").replace(".", " ").strip().upper()
+        # Remove common release group tags
+        clean_name = clean_name.replace("1080P", "").replace("720P", "").replace("HDRIP", "").replace("WEB DL", "").replace("X265", "").replace("AAC", "").strip()
         # Escape special characters for FFmpeg drawtext
         clean_name = clean_name.replace(":", "\\:").replace("'", "").replace('"', '')
         return clean_name
@@ -129,7 +131,7 @@ class FFmpegService:
         Transcode a segment into a vertical 9:16 MP4 clip with top title overlay using FFmpeg.
         """
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        duration = end_time - start_time
+        duration = max(1.0, end_time - start_time)
 
         target_width, target_height = 1080, 1920
         if "x" in resolution:
@@ -139,13 +141,12 @@ class FFmpegService:
         # Formatting titles
         title_text = cls.format_title_text(movie_title)
         part_text = f"PART {part_number}"
-        if show_movie_title:
+        if show_movie_title and title_text:
             full_overlay_text = f"{title_text}\n\n{part_text}"
         else:
             full_overlay_text = part_text
 
         # FFmpeg Video Filter chain:
-        # Create blurred background + centered scaled foreground + top title overlay
         filter_complex = (
             f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
             f"crop={target_width}:{target_height},boxblur=20:10[bg];"
@@ -164,8 +165,6 @@ class FFmpegService:
         )
 
         full_filter = filter_complex + drawtext_filter
-
-        # Encoder selection
         encoder = "libx265" if codec.lower() in ["h265", "hevc"] else "libx264"
 
         cmd = [
@@ -176,7 +175,7 @@ class FFmpegService:
             "-t", f"{duration:.2f}",
             "-filter_complex", full_filter,
             "-map", "[outv]",
-            "-map", "0:a?",  # Map audio if present
+            "-map", "0:a?",
             "-c:v", encoder,
             "-b:v", bitrate,
             "-r", str(fps),
@@ -194,8 +193,7 @@ class FFmpegService:
             logger.info(f"FFmpeg rendered clip Part {part_number} successfully to {output_path}")
             return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"FFmpeg rendering failed for Part {part_number}: {e.stderr}")
-            # Fallback simple command without complex filter if primary drawtext fails
+            logger.error(f"FFmpeg complex filter rendering failed for Part {part_number}: {e.stderr}")
             return cls._fallback_render(input_path, output_path, start_time, duration, encoder, bitrate, fps)
         except Exception as e:
             logger.error(f"Unexpected error rendering clip Part {part_number}: {e}")
