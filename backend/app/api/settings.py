@@ -36,6 +36,9 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
         auto_publish_tiktok=setting_map.get("auto_publish_tiktok", "true").lower() == "true",
         auto_publish_instagram=setting_map.get("auto_publish_instagram", "false").lower() == "true",
         auto_publish_facebook=setting_map.get("auto_publish_facebook", "false").lower() == "true",
+        telegram_bot_token=setting_map.get("telegram_bot_token", app_settings.TELEGRAM_BOT_TOKEN),
+        telegram_chat_id=setting_map.get("telegram_chat_id", app_settings.TELEGRAM_CHAT_ID),
+        telegram_auto_download=setting_map.get("telegram_auto_download", "true").lower() == "true",
         max_workers=int(setting_map.get("max_workers", app_settings.MAX_WORKERS))
     )
 

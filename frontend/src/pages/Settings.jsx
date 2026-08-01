@@ -22,6 +22,9 @@ export default function SettingsPage() {
     auto_publish_tiktok: true,
     auto_publish_instagram: false,
     auto_publish_facebook: false,
+    telegram_bot_token: '',
+    telegram_chat_id: '',
+    telegram_auto_download: true,
     max_workers: 0,
   });
 
