@@ -82,7 +82,15 @@ class SettingsSchema(BaseModel):
     auto_publish_tiktok: bool = Field(default=True, description="Auto-publish to TikTok")
     auto_publish_instagram: bool = Field(default=False, description="Auto-publish to Instagram Reels")
     auto_publish_facebook: bool = Field(default=False, description="Auto-publish to Facebook Reels")
+    telegram_bot_token: str = Field(default="", description="Telegram Bot Token for movie downloads")
+    telegram_chat_id: str = Field(default="", description="Telegram Chat/Channel ID")
+    telegram_auto_download: bool = Field(default=True, description="Auto-download movies sent to Telegram Bot")
     max_workers: int = Field(default=0, description="Concurrency level (0 = auto CPU thread count)")
+
+
+class TelegramDownloadRequest(BaseModel):
+    url_or_file_id: str = Field(..., description="Telegram message link, HTTP video URL, or file ID")
+    filename: Optional[str] = Field(None, description="Optional custom filename")
 
 
 class SettingsUpdateSchema(BaseModel):
@@ -104,6 +112,9 @@ class SettingsUpdateSchema(BaseModel):
     auto_publish_tiktok: Optional[bool] = None
     auto_publish_instagram: Optional[bool] = None
     auto_publish_facebook: Optional[bool] = None
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+    telegram_auto_download: Optional[bool] = None
     max_workers: Optional[int] = None
 
 

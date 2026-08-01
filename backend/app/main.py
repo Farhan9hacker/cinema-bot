@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.database import init_db
-from app.api import videos_router, queue_router, system_router, settings_router, logs_router
+from app.api import videos_router, queue_router, system_router, settings_router, logs_router, telegram_router
 from app.services.monitor import watcher_service
 
 # Configure Logging
@@ -78,6 +78,7 @@ app.include_router(videos_router, prefix="/api")
 app.include_router(queue_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(logs_router, prefix="/api")
+app.include_router(telegram_router, prefix="/api")
 
 
 @app.get("/api/health", tags=["Health"])

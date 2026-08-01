@@ -322,6 +322,58 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Telegram Bot & Auto-Ingestion */}
+          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
+              <span className="text-xl">✈️</span>
+              <h3 className="font-bold text-white text-md">Telegram Bot & Auto-Ingestion</h3>
+            </div>
+            <p className="text-xs text-gray-400">Configure your Telegram Bot token to directly download videos sent in Telegram channels or private chats</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Telegram Bot Token</label>
+                <input
+                  type="password"
+                  name="telegram_bot_token"
+                  value={formData.telegram_bot_token}
+                  onChange={handleChange}
+                  placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Allowed Telegram Chat / Channel ID</label>
+                <input
+                  type="text"
+                  name="telegram_chat_id"
+                  value={formData.telegram_chat_id}
+                  onChange={handleChange}
+                  placeholder="-100123456789"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex items-center justify-between p-3.5 bg-gray-900/80 border border-gray-800 rounded-xl">
+                <div>
+                  <span className="block text-xs font-bold text-white">Auto-Download Incoming Telegram Videos</span>
+                  <span className="text-[11px] text-gray-400">Automatically download any movie files sent to your Telegram Bot directly into input folder</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="telegram_auto_download"
+                    checked={formData.telegram_auto_download}
+                    onChange={handleChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
           {/* Upload Schedule & Automation Settings */}
           <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
             <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">

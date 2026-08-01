@@ -32,4 +32,7 @@ export const getLogs = (level = '', category = '') => {
   return api.get(url);
 };
 
+export const downloadTelegramMovie = (url_or_file_id, filename = '') =>
+  api.post('/telegram/download', { url_or_file_id, filename });
+
 export default api;

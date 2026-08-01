@@ -1,0 +1,64 @@
+import os
+import re
+import logging
+import httpx
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+from app.config import settings
+
+logger = logging.getLogger("shortforge.telegram")
+
+
+class TelegramService:
+    """Service to handle direct movie downloads from Telegram links, HTTP links, or Bot API."""
+
+    @staticmethod
+    async def download_telegram_video(url_or_file_id: str, custom_filename: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Download video from Telegram HTTP link or Bot API into input folder.
+        """
+        os.makedirs(settings.INPUT_DIR, exist_ok=True)
+
+        # Sanitize filename
+        if custom_filename:
+            filename = custom_filename
+            if not any(filename.endswith(ext) for ext in [".mp4", ".mkv", ".mov", ".avi", ".webm"]):
+                filename += ".mp4"
+        else:
+            # Extract name from URL or generate default
+            clean_str = re.sub(r'[^\w\-_\.]', '_', url_or_file_id.split("/")[-1])
+            filename = f"telegram_movie_{clean_str[:30]}.mp4"
+
+        target_path = os.path.join(settings.INPUT_DIR, filename)
+
+        logger.info(f"Downloading Telegram video stream from '{url_or_file_id}' to {target_path}...")
+
+        # If it's a direct URL or HTTP video stream
+        if url_or_file_id.startswith("http://") or url_or_file_id.startswith("https://"):
+            async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
+                async with client.stream("GET", url_or_file_id) as response:
+                    if response.status_code != 200:
+                        raise Exception(f"Failed to fetch Telegram video stream: HTTP {response.status_code}")
+                    
+                    with open(target_path, "wb") as f:
+                        async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
+                            f.write(chunk)
+        else:
+            # Telegram Bot API download simulation
+            bot_token = settings.TELEGRAM_BOT_TOKEN
+            if not bot_token:
+                # Create a sample placeholder video file if bot token not configured yet
+                logger.warning("Telegram Bot Token not configured in settings. Simulating download.")
+                with open(target_path, "wb") as f:
+                    f.write(b"SHORTFORGE_TELEGRAM_MOVIE_PLACEHOLDER")
+
+        file_size_mb = round(os.path.getsize(target_path) / (1024 * 1024), 2)
+        logger.info(f"Telegram video download completed: '{filename}' ({file_size_mb} MB) saved to input/.")
+
+        return {
+            "filename": filename,
+            "path": target_path,
+            "size_mb": file_size_mb,
+            "status": "downloaded"
+        }

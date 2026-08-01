@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     DEFAULT_AUTO_PUBLISH_INSTAGRAM: bool = False
     DEFAULT_AUTO_PUBLISH_FACEBOOK: bool = False
     
+    # Telegram Ingestion Defaults
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+    TELEGRAM_AUTO_DOWNLOAD: bool = True
+    
     # System Safety
     SAFE_DISK_FREE_GB: float = 5.0
     MAX_WORKERS: int = 0  # 0 = auto-calculate based on os.cpu_count()
