@@ -18,7 +18,7 @@ services:
     container_name: shortforge_frontend
     restart: always
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8001
 
   backend:
     build:
@@ -27,7 +27,7 @@ services:
     container_name: shortforge_backend
     restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://shortforge:shortforge_pass@postgres:5432/shortforge
       - REDIS_URL=redis://redis:6379/0
@@ -84,7 +84,7 @@ services:
     container_name: shortforge_redis
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   postgres:
     image: postgres:16-alpine
@@ -95,7 +95,7 @@ services:
       POSTGRES_PASSWORD: shortforge_pass
       POSTGRES_DB: shortforge
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
