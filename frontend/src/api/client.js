@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Default to relative '/api' endpoint for Nginx reverse proxy compatibility
+const rawApiUrl = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : (rawApiUrl === '/' ? '/api' : `${rawApiUrl}/api`);
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
