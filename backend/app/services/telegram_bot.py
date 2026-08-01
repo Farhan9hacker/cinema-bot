@@ -1,11 +1,9 @@
 import os
-import asyncio
+import time
 import logging
+import asyncio
 from pathlib import Path
 from typing import Optional
-
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 from app.config import settings
 
@@ -13,103 +11,125 @@ logger = logging.getLogger("shortforge.telegram_bot")
 
 
 class TelegramBotListener:
-    """Service to poll Telegram Bot API for forwarded movie messages and auto-download into input/."""
+    """Service to run Pyrogram MTProto bot client for unlimited (up to 2GB+) movie file downloads."""
 
     def __init__(self):
         self.app = None
         self.is_running = False
 
     async def start_bot(self, token: Optional[str] = None):
-        """Initialize and start Telegram bot long-polling listener."""
+        """Initialize and start Pyrogram MTProto bot client listener."""
         bot_token = token or settings.TELEGRAM_BOT_TOKEN
         if not bot_token:
             logger.info("No TELEGRAM_BOT_TOKEN provided, skipping Telegram Bot listener polling.")
             return
 
         try:
-            logger.info("Initializing Telegram Bot Polling Listener...")
-            self.app = ApplicationBuilder().token(bot_token).build()
+            from pyrogram import Client, filters, enums
+            from pyrogram.types import Message
 
-            # Register handlers
-            self.app.add_handler(CommandHandler("start", self._cmd_start))
-            self.app.add_handler(CommandHandler("help", self._cmd_start))
-            self.app.add_handler(MessageHandler(filters.VIDEO | filters.Document.ALL, self._handle_incoming_media))
+            logger.info("Initializing Pyrogram MTProto Bot Client Listener...")
 
-            await self.app.initialize()
+            api_id = settings.TELEGRAM_API_ID if hasattr(settings, "TELEGRAM_API_ID") and settings.TELEGRAM_API_ID else 6
+            api_hash = settings.TELEGRAM_API_HASH if hasattr(settings, "TELEGRAM_API_HASH") and settings.TELEGRAM_API_HASH else "eb0663ab133162d98cd9e685f09623e1"
+
+            # Create Pyrogram Client in memory session
+            self.app = Client(
+                name="shortforge_tg_bot",
+                api_id=api_id,
+                api_hash=api_hash,
+                bot_token=bot_token,
+                in_memory=True
+            )
+
+            @self.app.on_message(filters.command(["start", "help"]))
+            async def cmd_start(_, message: Message):
+                await message.reply_text(
+                    "🎬 **ShortForge Automated Movie Bot Online!**\n\n"
+                    "Forward any movie file or video message here to automatically download and split it into 9:16 vertical short clips for YouTube Shorts, TikTok, and Instagram Reels!",
+                    parse_mode=enums.ParseMode.MARKDOWN
+                )
+
+            @self.app.on_message(filters.video | filters.document)
+            async def handle_incoming_media(client: Client, message: Message):
+                media = message.video or message.document
+                if not media:
+                    return
+
+                file_name = getattr(media, "file_name", None) or f"telegram_movie_{media.file_unique_id}.mp4"
+                file_size_bytes = getattr(media, "file_size", 0) or 0
+                file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
+
+                status_msg = await message.reply_text(
+                    f"📥 **Received Video File:** `{file_name}` ({file_size_mb} MB)\n"
+                    f"⏳ Initializing MTProto high-speed stream into ShortForge `input/` folder...",
+                    parse_mode=enums.ParseMode.MARKDOWN
+                )
+
+                os.makedirs(settings.INPUT_DIR, exist_ok=True)
+                tmp_path = os.path.join(settings.INPUT_DIR, f"{file_name}.tmp")
+                final_path = os.path.join(settings.INPUT_DIR, file_name)
+
+                last_update_time = [time.time()]
+
+                async def progress_callback(current, total):
+                    now = time.time()
+                    if now - last_update_time[0] >= 3.0 or current == total:
+                        last_update_time[0] = now
+                        percent = round((current * 100) / total, 1) if total > 0 else 0
+                        curr_mb = round(current / (1024 * 1024), 1)
+                        tot_mb = round(total / (1024 * 1024), 1)
+                        try:
+                            await status_msg.edit_text(
+                                f"📥 **Downloading Movie File...** `{file_name}`\n"
+                                f"📊 Progress: **{percent}%** ({curr_mb} MB / {tot_mb} MB)\n"
+                                f"🚀 Streaming directly to ShortForge server!",
+                                parse_mode=enums.ParseMode.MARKDOWN
+                            )
+                        except Exception:
+                            pass
+
+                try:
+                    # Download 2GB+ media using Pyrogram MTProto stream
+                    await client.download_media(
+                        message=message,
+                        file_name=tmp_path,
+                        progress=progress_callback
+                    )
+
+                    if os.path.exists(tmp_path):
+                        if os.path.exists(final_path):
+                            os.remove(final_path)
+                        os.rename(tmp_path, final_path)
+
+                    await status_msg.edit_text(
+                        f"✅ **Ingestion Completed!**\n"
+                        f"🎬 Video `{file_name}` ({file_size_mb} MB) is now saved in ShortForge `input/` folder and is being split into 9:16 vertical short clips!",
+                        parse_mode=enums.ParseMode.MARKDOWN
+                    )
+                except Exception as e:
+                    logger.error(f"Error downloading Pyrogram MTProto media: {e}", exc_info=True)
+                    await status_msg.edit_text(
+                        f"❌ **Download Error:** {e}\n"
+                        f"Please try resending or paste the link in the ShortForge Dashboard.",
+                        parse_mode=enums.ParseMode.MARKDOWN
+                    )
+
             await self.app.start()
-            await self.app.updater.start_polling(drop_pending_updates=True)
             self.is_running = True
-            logger.info("Telegram Bot Polling Listener started successfully!")
+            logger.info("Pyrogram MTProto Telegram Bot Listener started successfully!")
         except Exception as e:
-            logger.error(f"Failed to start Telegram Bot Listener: {e}")
+            logger.error(f"Failed to start Pyrogram Telegram Bot Listener: {e}")
 
     async def stop_bot(self):
-        """Gracefully stop Telegram bot polling listener."""
+        """Gracefully stop Pyrogram bot client."""
         if self.app and self.is_running:
             try:
-                await self.app.updater.stop()
                 await self.app.stop()
-                await self.app.shutdown()
                 self.is_running = False
-                logger.info("Telegram Bot Listener stopped.")
+                logger.info("Pyrogram Telegram Bot Listener stopped.")
             except Exception as e:
-                logger.warning(f"Error stopping Telegram Bot Listener: {e}")
-
-    async def _cmd_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Command handler for /start."""
-        if not update.message:
-            return
-        await update.message.reply_text(
-            "🎬 **ShortForge Automated Movie Bot Online!**\n\n"
-            "Forward any movie file or video message here to automatically download and split it into 9:16 vertical short clips for YouTube Shorts, TikTok, and Instagram Reels!",
-            parse_mode="Markdown"
-        )
-
-    async def _handle_incoming_media(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Message handler for forwarded or uploaded video files."""
-        message = update.message
-        if not message:
-            return
-
-        media = message.video or message.document
-        if not media:
-            return
-
-        file_name = getattr(media, "file_name", None) or f"telegram_movie_{media.file_unique_id}.mp4"
-        file_size_bytes = getattr(media, "file_size", 0) or 0
-        file_size_mb = round(file_size_bytes / (1024 * 1024), 2)
-
-        status_msg = await message.reply_text(
-            f"📥 **Received Video File:** `{file_name}` ({file_size_mb} MB)\n"
-            f"⏳ Ingesting into ShortForge `input/` folder...",
-            parse_mode="Markdown"
-        )
-
-        try:
-            os.makedirs(settings.INPUT_DIR, exist_ok=True)
-            tmp_path = os.path.join(settings.INPUT_DIR, f"{file_name}.tmp")
-            final_path = os.path.join(settings.INPUT_DIR, file_name)
-
-            tg_file = await context.bot.get_file(media.file_id)
-            await tg_file.download_to_drive(tmp_path)
-
-            if os.path.exists(tmp_path):
-                if os.path.exists(final_path):
-                    os.remove(final_path)
-                os.rename(tmp_path, final_path)
-
-            await status_msg.edit_text(
-                f"✅ **Ingestion Completed!**\n"
-                f"🎬 Video `{file_name}` ({file_size_mb} MB) is now saved in ShortForge `input/` folder and is being split into 9:16 vertical short clips!",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.error(f"Error processing Telegram bot media upload: {e}", exc_info=True)
-            await status_msg.edit_text(
-                f"⚠️ **Notice:** Direct Bot API downloads support files up to 20MB.\n"
-                f"For large movie files like `{file_name}` ({file_size_mb} MB), please paste the direct Telegram stream link or HTTP URL in the **ShortForge Dashboard** (Upload Video ➔ Telegram / URL tab).",
-                parse_mode="Markdown"
-            )
+                logger.warning(f"Error stopping Pyrogram Telegram Bot Listener: {e}")
 
 
 telegram_bot_listener = TelegramBotListener()
