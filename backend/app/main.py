@@ -42,7 +42,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Directory Watcher failed to start: {e}")
 
-    # 3. Auto-resume any pending or processing videos on startup
+    # 3. Start Telegram Bot Polling Listener
+    try:
+        from app.services.telegram_bot import telegram_bot_listener
+        await telegram_bot_listener.start_bot()
+    except Exception as e:
+        logger.warning(f"Telegram Bot Listener failed to start: {e}")
+
+    # 4. Auto-resume any pending or processing videos on startup
     try:
         from app.worker.tasks import resume_pending_tasks
         resume_pending_tasks.delay()
@@ -54,6 +61,12 @@ async def lifespan(app: FastAPI):
 
     # Shutdown logic
     logger.info("Shutting down ShortForge Backend...")
+    try:
+        from app.services.telegram_bot import telegram_bot_listener
+        await telegram_bot_listener.stop_bot()
+    except Exception:
+        pass
+
     try:
         watcher_service.stop()
     except Exception:

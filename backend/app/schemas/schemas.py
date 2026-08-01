@@ -61,6 +61,7 @@ class SystemStatusResponse(BaseModel):
     completed_videos_count: int = 0
     failed_videos_count: int = 0
     total_videos_count: int = 0
+    
     queue_size: int = 0
     queue_paused: bool = False
 
