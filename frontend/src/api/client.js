@@ -10,8 +10,16 @@ const api = axios.create({
 export const getSystemStatus = () => api.get('/system/status');
 export const getVideos = (statusFilter = '') => api.get(`/videos${statusFilter ? `?status_filter=${statusFilter}` : ''}`);
 export const getVideoDetails = (videoId) => api.get(`/videos/${videoId}`);
-export const uploadVideo = (formData) => api.post('/videos/upload', formData, {
+export const uploadVideo = (formData, onProgress) => api.post('/videos/upload', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
+  onUploadProgress: (progressEvent) => {
+    if (onProgress && progressEvent.total) {
+      const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      const loadedMB = (progressEvent.loaded / (1024 * 1024)).toFixed(1);
+      const totalMB = (progressEvent.total / (1024 * 1024)).toFixed(1);
+      onProgress({ percent, loadedMB, totalMB });
+    }
+  }
 });
 export const startVideo = (videoId) => api.post(`/videos/${videoId}/start`);
 export const pauseVideo = (videoId) => api.post(`/videos/${videoId}/pause`);

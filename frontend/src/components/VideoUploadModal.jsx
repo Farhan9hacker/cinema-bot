@@ -8,6 +8,7 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
   const [telegramUrl, setTelegramUrl] = useState('');
   const [customFilename, setCustomFilename] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ percent: 0, loadedMB: 0, totalMB: 0 });
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
@@ -16,6 +17,7 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setError('');
+      setUploadProgress({ percent: 0, loadedMB: 0, totalMB: (e.target.files[0].size / (1024 * 1024)).toFixed(1) });
     }
   };
 
@@ -33,7 +35,9 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
         }
         const formData = new FormData();
         formData.append('file', file);
-        await uploadVideo(formData);
+        await uploadVideo(formData, (progress) => {
+          setUploadProgress(progress);
+        });
       } else {
         if (!telegramUrl.trim()) {
           setError('Please enter a Telegram video link, HTTP URL, or file ID');
@@ -107,13 +111,36 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
                 type="file"
                 accept="video/*"
                 onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploading}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
               {file ? (
-                <div className="flex flex-col items-center space-y-2">
+                <div className="flex flex-col items-center space-y-3">
                   <Film className="w-10 h-10 text-indigo-400" />
                   <span className="text-sm font-semibold text-white truncate max-w-xs">{file.name}</span>
                   <span className="text-xs text-gray-400">{(file.size / (1024 * 1024)).toFixed(1)} MB</span>
+
+                  {/* Detailed Upload Progress Bar */}
+                  {uploading && (
+                    <div className="w-full mt-2 space-y-1.5 text-left bg-gray-900 p-3 rounded-xl border border-gray-800">
+                      <div className="flex justify-between items-center text-xs font-semibold">
+                        <span className="text-indigo-400">Uploading Video File...</span>
+                        <span className="text-white font-bold">{uploadProgress.percent}%</span>
+                      </div>
+
+                      <div className="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden border border-gray-700">
+                        <div
+                          className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 rounded-full transition-all duration-300 shadow-md shadow-indigo-500/50"
+                          style={{ width: `${uploadProgress.percent}%` }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 pt-1">
+                        <span>Transferred: <strong className="text-indigo-300">{uploadProgress.loadedMB || 0} MB</strong> / {uploadProgress.totalMB || (file.size / (1024 * 1024)).toFixed(1)} MB</span>
+                        <span className="animate-pulse text-indigo-400">Processing Pipeline Ready</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center space-y-2">
