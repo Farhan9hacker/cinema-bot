@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,36 +8,20 @@ from app.models.models import Video, Clip
 from app.schemas.schemas import SystemStatusResponse
 from app.services.sys_info import get_system_metrics
 
+logger = logging.getLogger("shortforge.api.system")
+
 router = APIRouter(prefix="/system", tags=["System"])
 
 
 @router.get("/status", response_model=SystemStatusResponse)
 async def get_system_status(db: AsyncSession = Depends(get_db)):
-    """Fetch live system metrics, active processing status, progress bar %, and queue totals."""
+    """Fetch live system metrics, active processing status, progress bar %, and queue totals with fallback protection."""
     metrics = get_system_metrics()
 
-    # Video status counts
-    v_counts_res = await db.execute(
-        select(Video.status, func.count(Video.id)).group_by(Video.status)
-    )
-    video_status_counts = dict(v_counts_res.all())
-
-    completed_videos = video_status_counts.get("completed", 0)
-    failed_videos = video_status_counts.get("failed", 0) + video_status_counts.get("completed_with_errors", 0)
-    total_videos = sum(video_status_counts.values())
-
-    # Queue size
-    q_size_res = await db.execute(
-        select(func.count(Clip.id)).where(Clip.status.in_(["queued", "rendering"]))
-    )
-    queue_size = q_size_res.scalar() or 0
-
-    # Active processing video details
-    active_video_res = await db.execute(
-        select(Video).where(Video.status == "processing").order_by(Video.updated_at.desc())
-    )
-    active_video = active_video_res.scalar_one_or_none()
-
+    completed_videos = 0
+    failed_videos = 0
+    total_videos = 0
+    queue_size = 0
     current_title = None
     current_video_id = None
     current_part = None
@@ -45,31 +30,54 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
     progress_percent = 0.0
     eta_seconds = None
 
-    if active_video:
-        current_title = active_video.filename
-        current_video_id = active_video.id
-
-        # Fetch clips for active video
-        clips_res = await db.execute(
-            select(Clip).where(Clip.video_id == active_video.id).order_by(Clip.part_number)
+    try:
+        # Video status counts
+        v_counts_res = await db.execute(
+            select(Video.status, func.count(Video.id)).group_by(Video.status)
         )
-        clips = clips_res.scalars().all()
-        total_clips_count = len(clips)
+        video_status_counts = dict(v_counts_res.all())
 
-        if total_clips_count > 0:
-            completed_clips_count = sum(1 for c in clips if c.status == "completed")
-            rendering_clip = next((c for c in clips if c.status == "rendering"), None)
+        completed_videos = video_status_counts.get("completed", 0)
+        failed_videos = video_status_counts.get("failed", 0) + video_status_counts.get("completed_with_errors", 0)
+        total_videos = sum(video_status_counts.values())
 
-            if rendering_clip:
-                current_part = rendering_clip.part_number
-            elif completed_clips_count < total_clips_count:
-                current_part = completed_clips_count + 1
+        # Queue size
+        q_size_res = await db.execute(
+            select(func.count(Clip.id)).where(Clip.status.in_(["queued", "rendering"]))
+        )
+        queue_size = q_size_res.scalar() or 0
 
-            progress_percent = round((completed_clips_count / total_clips_count) * 100.0, 1)
+        # Active processing video details
+        active_video_res = await db.execute(
+            select(Video).where(Video.status == "processing").order_by(Video.updated_at.desc())
+        )
+        active_video = active_video_res.scalar_one_or_none()
 
-            # Rough ETA calculation: ~25s per 90s clip
-            remaining_clips = total_clips_count - completed_clips_count
-            eta_seconds = round(remaining_clips * 25.0, 1)
+        if active_video:
+            current_title = active_video.filename
+            current_video_id = active_video.id
+
+            clips_res = await db.execute(
+                select(Clip).where(Clip.video_id == active_video.id).order_by(Clip.part_number)
+            )
+            clips = clips_res.scalars().all()
+            total_clips_count = len(clips)
+
+            if total_clips_count > 0:
+                completed_clips_count = sum(1 for c in clips if c.status == "completed")
+                rendering_clip = next((c for c in clips if c.status == "rendering"), None)
+
+                if rendering_clip:
+                    current_part = rendering_clip.part_number
+                elif completed_clips_count < total_clips_count:
+                    current_part = completed_clips_count + 1
+
+                progress_percent = round((completed_clips_count / total_clips_count) * 100.0, 1)
+
+                remaining_clips = total_clips_count - completed_clips_count
+                eta_seconds = round(remaining_clips * 25.0, 1)
+    except Exception as e:
+        logger.warning(f"Database query in get_system_status encountered transient exception: {e}")
 
     return SystemStatusResponse(
         cpu_percent=metrics["cpu_percent"],

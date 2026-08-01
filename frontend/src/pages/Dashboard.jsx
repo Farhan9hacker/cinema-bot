@@ -16,14 +16,15 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [sysRes, queueRes, logsRes] = await Promise.all([
+      const [sysRes, queueRes, logsRes] = await Promise.allSettled([
         getSystemStatus(),
         getQueueStatus(),
         getLogs('', ''),
       ]);
-      setSystemStats(sysRes.data);
-      setQueueData(queueRes.data);
-      setLogsData(logsRes.data);
+
+      if (sysRes.status === 'fulfilled') setSystemStats(sysRes.value.data);
+      if (queueRes.status === 'fulfilled') setQueueData(queueRes.value.data);
+      if (logsRes.status === 'fulfilled') setLogsData(logsRes.value.data);
     } catch (err) {
       console.error('Failed to fetch dashboard metrics:', err);
     } finally {
