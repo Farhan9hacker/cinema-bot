@@ -125,9 +125,14 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
             </div>
           ) : (
             <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-[11px] text-indigo-300">
+                <span className="font-bold text-white block mb-0.5">💡 How to download from Telegram:</span>
+                In Telegram, click <strong>Forward</strong> on any movie message (from any bot/group) and send it to your ShortForge Bot, or paste the link/file ID below!
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">
-                  Telegram Video Link or HTTP URL
+                  Telegram Video Link, File ID, or Video URL
                 </label>
                 <div className="relative">
                   <Link className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
@@ -135,7 +140,7 @@ export default function VideoUploadModal({ isOpen, onClose, onSuccess }) {
                     type="text"
                     value={telegramUrl}
                     onChange={(e) => setTelegramUrl(e.target.value)}
-                    placeholder="https://t.me/c/12345/678 or direct video link"
+                    placeholder="e.g. Mr.Butler.2000.1080p.mkv or Telegram link"
                     className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
