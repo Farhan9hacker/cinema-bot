@@ -116,6 +116,8 @@ export default function Dashboard() {
       <ProgressBar
         videoTitle={systemStats?.current_video_title}
         currentPart={systemStats?.current_part}
+        completedClipsCount={systemStats?.completed_clips_count ?? 0}
+        totalClipsCount={systemStats?.total_clips_count ?? 0}
         progressPercent={systemStats?.progress_percent ?? 0}
         etaSeconds={systemStats?.eta_seconds}
       />

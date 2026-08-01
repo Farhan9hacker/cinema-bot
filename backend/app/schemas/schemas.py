@@ -54,6 +54,8 @@ class SystemStatusResponse(BaseModel):
     current_video_title: Optional[str] = None
     current_video_id: Optional[int] = None
     current_part: Optional[int] = None
+    completed_clips_count: int = 0
+    total_clips_count: int = 0
     progress_percent: float = 0.0
     eta_seconds: Optional[float] = None
     completed_videos_count: int = 0

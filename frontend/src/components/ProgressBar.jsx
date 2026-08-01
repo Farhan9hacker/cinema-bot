@@ -4,6 +4,8 @@ import { Clock, Play, CheckCircle2 } from 'lucide-react';
 export default function ProgressBar({
   videoTitle,
   currentPart,
+  completedClipsCount = 0,
+  totalClipsCount = 0,
   progressPercent = 0,
   etaSeconds = null
 }) {
@@ -32,7 +34,7 @@ export default function ProgressBar({
             </h3>
             {currentPart && (
               <p className="text-xs text-gray-400 mt-0.5">
-                Currently Transcoding: <span className="font-semibold text-indigo-300">Part {currentPart}</span>
+                Currently Transcoding: <span className="font-semibold text-indigo-300">Part {currentPart} {totalClipsCount ? `of ${totalClipsCount} Clips` : ''}</span>
               </p>
             )}
           </div>
@@ -48,7 +50,7 @@ export default function ProgressBar({
 
       <div className="mt-5">
         <div className="flex justify-between items-center text-xs font-semibold text-gray-400 mb-2">
-          <span>Overall Video Progress</span>
+          <span>Overall Video Progress {totalClipsCount > 0 ? `(${completedClipsCount} / ${totalClipsCount} Clips Rendered)` : ''}</span>
           <span className="text-indigo-400 text-sm font-bold">{progressPercent.toFixed(1)}%</span>
         </div>
         <div className="w-full bg-gray-900/90 h-3.5 rounded-full overflow-hidden p-0.5 border border-gray-800 shadow-inner">

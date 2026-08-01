@@ -40,6 +40,8 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
     current_title = None
     current_video_id = None
     current_part = None
+    completed_clips_count = 0
+    total_clips_count = 0
     progress_percent = 0.0
     eta_seconds = None
 
@@ -52,21 +54,21 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
             select(Clip).where(Clip.video_id == active_video.id).order_by(Clip.part_number)
         )
         clips = clips_res.scalars().all()
-        total_clips = len(clips)
+        total_clips_count = len(clips)
 
-        if total_clips > 0:
-            completed_clips = sum(1 for c in clips if c.status == "completed")
+        if total_clips_count > 0:
+            completed_clips_count = sum(1 for c in clips if c.status == "completed")
             rendering_clip = next((c for c in clips if c.status == "rendering"), None)
 
             if rendering_clip:
                 current_part = rendering_clip.part_number
-            elif completed_clips < total_clips:
-                current_part = completed_clips + 1
+            elif completed_clips_count < total_clips_count:
+                current_part = completed_clips_count + 1
 
-            progress_percent = round((completed_clips / total_clips) * 100.0, 1)
+            progress_percent = round((completed_clips_count / total_clips_count) * 100.0, 1)
 
-            # Rough ETA calculation: ~15-30s per 90s clip
-            remaining_clips = total_clips - completed_clips
+            # Rough ETA calculation: ~25s per 90s clip
+            remaining_clips = total_clips_count - completed_clips_count
             eta_seconds = round(remaining_clips * 25.0, 1)
 
     return SystemStatusResponse(
@@ -79,6 +81,8 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
         current_video_title=current_title,
         current_video_id=current_video_id,
         current_part=current_part,
+        completed_clips_count=completed_clips_count,
+        total_clips_count=total_clips_count,
         progress_percent=progress_percent,
         eta_seconds=eta_seconds,
         completed_videos_count=completed_videos,
