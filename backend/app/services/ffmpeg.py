@@ -119,16 +119,22 @@ class FFmpegService:
         bitrate: str = "6M",
         fps: int = 30,
         resolution: str = "1080x1920",
+        crop_mode: str = "blur_pad",
+        normalize_audio: bool = True,
         font_path: Optional[str] = None,
         font_size: int = 54,
         font_color: str = "white",
         outline_color: str = "black",
         outline_width: int = 4,
         top_padding: int = 120,
-        show_movie_title: bool = True
+        show_movie_title: bool = True,
+        hook_text: str = "MUST WATCH ENDING 🍿",
+        enable_hook_text: bool = True,
+        watermark_handle: str = "@ShortForgeClips",
+        enable_watermark: bool = True
     ) -> bool:
         """
-        Transcode a segment into a vertical 9:16 MP4 clip with top title overlay using FFmpeg.
+        Transcode a segment into a vertical 9:16 MP4 clip with advanced crop modes, EBU R128 audio normalization, hook banner, and watermark overlay.
         """
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         duration = max(1.0, end_time - start_time)
@@ -138,7 +144,7 @@ class FFmpegService:
             parts = resolution.split("x")
             target_width, target_height = int(parts[0]), int(parts[1])
 
-        # Formatting titles
+        # Title formatting
         title_text = cls.format_title_text(movie_title)
         part_text = f"PART {part_number}"
         if show_movie_title and title_text:
@@ -146,23 +152,73 @@ class FFmpegService:
         else:
             full_overlay_text = part_text
 
-        # FFmpeg Video Filter chain:
-        filter_complex = (
-            f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
-            f"crop={target_width}:{target_height},boxblur=20:10[bg];"
-            f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=decrease[fg];"
-            f"[bg][fg]overlay=(W-w)/2:(H-h)/2[base];"
-        )
+        # 1. Base Video Layout & Crop Chain
+        if crop_mode == "center_crop":
+            filter_complex = (
+                f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+                f"crop={target_width}:{target_height}[base];"
+            )
+        elif crop_mode == "split_screen":
+            half_h = target_height // 2
+            filter_complex = (
+                f"[0:v]scale={target_width}:{half_h}:force_original_aspect_ratio=increase,"
+                f"crop={target_width}:{half_h}[top];"
+                f"[0:v]scale={target_width}:{half_h}:force_original_aspect_ratio=increase,"
+                f"crop={target_width}:{half_h},boxblur=20:10[bottom];"
+                f"[top][bottom]vstack[base];"
+            )
+        else:
+            # Default: blur_pad
+            filter_complex = (
+                f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+                f"crop={target_width}:{target_height},boxblur=20:10[bg];"
+                f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=decrease[fg];"
+                f"[bg][fg]overlay=(W-w)/2:(H-h)/2[base];"
+            )
 
         font_option = f":fontfile='{font_path}'" if font_path and os.path.exists(font_path) else ""
         
-        # Text Overlay
+        # 2. Main Title Text Overlay
         drawtext_filter = (
             f"[base]drawtext=text='{full_overlay_text}'{font_option}:"
             f"fontsize={font_size}:fontcolor={font_color}:"
             f"bordercolor={outline_color}:borderw={outline_width}:"
-            f"x=(w-text_w)/2:y={top_padding}:line_spacing=15[outv]"
+            f"x=(w-text_w)/2:y={top_padding}:line_spacing=15[v1];"
         )
+
+        curr_stream = "[v1]"
+
+        # 3. Optional 3-Second Hook Overlay
+        if enable_hook_text and hook_text.strip():
+            clean_hook = hook_text.replace(":", "\\:").replace("'", "").replace('"', '')
+            hook_filter = (
+                f"{curr_stream}drawtext=text='{clean_hook}'{font_option}:"
+                f"fontsize={int(font_size * 0.85)}:fontcolor=yellow:"
+                f"bordercolor=black:borderw=5:"
+                f"x=(w-text_w)/2:y={top_padding + 160}:enable='between(t,0,3)'[v2];"
+            )
+            curr_stream = "[v2]"
+            drawtext_filter += hook_filter
+
+        # 4. Optional Channel Watermark Handle Overlay
+        if enable_watermark and watermark_handle.strip():
+            clean_wm = watermark_handle.replace(":", "\\:").replace("'", "").replace('"', '')
+            wm_filter = (
+                f"{curr_stream}drawtext=text='{clean_wm}'{font_option}:"
+                f"fontsize=24:fontcolor=white@0.7:"
+                f"bordercolor=black@0.7:borderw=2:"
+                f"x=w-text_w-30:y=h-60[outv]"
+            )
+            drawtext_filter += wm_filter
+        else:
+            # Close stream alias
+            drawtext_filter = drawtext_filter.replace(f"{curr_stream};", f"[outv]")
+
+        # Clean trailing semicolon if present
+        if drawtext_filter.endswith(";"):
+            drawtext_filter = drawtext_filter[:-1]
+            if "[v1]" in drawtext_filter and "[outv]" not in drawtext_filter:
+                drawtext_filter = drawtext_filter.replace("[v1]", "[outv]")
 
         full_filter = filter_complex + drawtext_filter
         encoder = "libx265" if codec.lower() in ["h265", "hevc"] else "libx264"
@@ -178,13 +234,16 @@ class FFmpegService:
             "-map", "0:a?",
             "-c:v", encoder,
             "-b:v", bitrate,
-            "-r", str(fps),
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-preset", "fast",
-            "-movflags", "+faststart",
-            output_path
+            "-r", str(fps)
         ]
+
+        # Audio Normalization Filter (EBU R128 Loudness)
+        if normalize_audio:
+            cmd.extend(["-af", "loudnorm=I=-16:LRA=11:TP=-1.5", "-c:a", "aac", "-b:a", "192k"])
+        else:
+            cmd.extend(["-c:a", "aac", "-b:a", "192k"])
+
+        cmd.extend(["-preset", "fast", "-movflags", "+faststart", output_path])
 
         logger.info(f"Executing FFmpeg render command for clip Part {part_number}: {' '.join(cmd)}")
 

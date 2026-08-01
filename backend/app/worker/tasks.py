@@ -120,13 +120,19 @@ def _process_video_sync(video_id: int):
                     bitrate=current_settings["bitrate"],
                     fps=current_settings["fps"],
                     resolution=current_settings["resolution"],
+                    crop_mode=current_settings.get("crop_mode", "blur_pad"),
+                    normalize_audio=current_settings.get("normalize_audio", True),
                     font_path=font_path,
                     font_size=current_settings["overlay_size"],
                     font_color=current_settings["overlay_color"],
                     outline_color=current_settings["overlay_outline_color"],
                     outline_width=current_settings["overlay_outline_width"],
                     top_padding=current_settings["top_padding"],
-                    show_movie_title=current_settings["show_movie_title"]
+                    show_movie_title=current_settings["show_movie_title"],
+                    hook_text=current_settings.get("hook_text", "MUST WATCH ENDING 🍿"),
+                    enable_hook_text=current_settings.get("enable_hook_text", True),
+                    watermark_handle=current_settings.get("watermark_handle", "@ShortForgeClips"),
+                    enable_watermark=current_settings.get("enable_watermark", True)
                 )
 
                 if render_ok and os.path.exists(clip.output_path) and os.path.getsize(clip.output_path) > 0:

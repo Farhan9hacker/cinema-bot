@@ -205,3 +205,37 @@ async def delete_video(video_id: int, db: AsyncSession = Depends(get_db)):
 
     await db.delete(video)
     await db.commit()
+
+
+@router.get("/{video_id}/download-zip")
+async def download_video_clips_zip(video_id: int, db: AsyncSession = Depends(get_db)):
+    """Package and download all completed 9:16 short clips as a single ZIP archive."""
+    import zipfile
+    from fastapi.responses import FileResponse
+
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalar_one_or_none()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    result_clips = await db.execute(
+        select(Clip).where(Clip.video_id == video_id, Clip.status == "completed").order_by(Clip.part_number)
+    )
+    clips = result_clips.scalars().all()
+
+    if not clips:
+        raise HTTPException(status_code=400, detail="No completed clip segments available to package.")
+
+    zip_filename = f"{os.path.splitext(video.filename)[0]}_ShortForge_Clips.zip"
+    zip_path = os.path.join(settings.OUTPUT_DIR, zip_filename)
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for clip in clips:
+            if os.path.exists(clip.output_path):
+                zipf.write(clip.output_path, arcname=clip.filename)
+
+    return FileResponse(
+        path=zip_path,
+        filename=zip_filename,
+        media_type="application/zip"
+    )

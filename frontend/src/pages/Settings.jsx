@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, CheckCircle2, Eye, Sliders } from 'lucide-react';
+import { Settings, Save, CheckCircle2, Eye, Sliders, Volume2, Sparkles, Palette } from 'lucide-react';
 import { getSettings, updateSettings } from '../api/client';
 
 export default function SettingsPage() {
@@ -9,6 +9,8 @@ export default function SettingsPage() {
     bitrate: '6M',
     resolution: '1080x1920',
     fps: 30,
+    crop_mode: 'blur_pad',
+    normalize_audio: true,
     overlay_font: 'DejaVuSans-Bold.ttf',
     overlay_size: 54,
     overlay_color: 'white',
@@ -16,6 +18,11 @@ export default function SettingsPage() {
     overlay_outline_width: 4,
     top_padding: 120,
     show_movie_title: true,
+    hook_text: 'MUST WATCH ENDING 🍿',
+    enable_hook_text: true,
+    watermark_handle: '@ShortForgeClips',
+    enable_watermark: true,
+    active_theme: 'cyberpunk',
     upload_schedule: 'immediate',
     upload_interval_mins: 30,
     auto_publish_youtube: true,
@@ -71,20 +78,20 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return <div className="p-12 text-center text-gray-400">Loading settings configuration...</div>;
+    return <div className="p-12 text-center text-cyan-400 font-mono">Loading Studio configuration...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">System & Transcoder Settings</h1>
-          <p className="text-xs text-gray-400 mt-1">Configure segment duration, FFmpeg video encoding, overlay typography, and schedule</p>
+          <h1 className="text-2xl font-black gradient-text-cyber tracking-tight">Studio Engine & Transcoder Settings</h1>
+          <p className="text-xs text-gray-400 mt-1">Configure split-screen layout, FFmpeg audio normalization, hook banner, and watermark handle</p>
         </div>
         {savedSuccess && (
-          <div className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold animate-bounce">
+          <div className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold animate-bounce">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Settings Saved!</span>
+            <span>Studio Settings Saved!</span>
           </div>
         )}
       </div>
@@ -92,14 +99,29 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form Controls */}
         <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
-          {/* Video Transcoding Specs */}
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+          
+          {/* Video Transcoding & Crop Layout */}
+          <div className="glass-panel p-6 rounded-3xl border border-cyan-500/20 space-y-4">
             <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
-              <Sliders className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-bold text-white text-md">Transcoding Parameters</h3>
+              <Sliders className="w-5 h-5 text-cyan-400" />
+              <h3 className="font-bold text-white text-md">Video Layout & Aspect Ratio</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Crop & Layout Mode</label>
+                <select
+                  name="crop_mode"
+                  value={formData.crop_mode}
+                  onChange={handleChange}
+                  className="w-full bg-gray-900 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="blur_pad">Background Blur Pad (Vertical 9:16)</option>
+                  <option value="center_crop">Center Crop Zoom (Vertical 9:16)</option>
+                  <option value="split_screen">Dual Split-Screen (Movie Top + Pad Bottom)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">Clip Duration (Seconds)</label>
                 <input
@@ -109,7 +131,7 @@ export default function SettingsPage() {
                   onChange={handleChange}
                   min="10"
                   max="300"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none"
                 />
               </div>
 
@@ -119,7 +141,7 @@ export default function SettingsPage() {
                   name="video_codec"
                   value={formData.video_codec}
                   onChange={handleChange}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="h264">H.264 (Universal Compatibility)</option>
                   <option value="h265">H.265 / HEVC (High Efficiency)</option>
@@ -133,284 +155,99 @@ export default function SettingsPage() {
                   name="resolution"
                   value={formData.resolution}
                   onChange={handleChange}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Target Bitrate</label>
-                <input
-                  type="text"
-                  name="bitrate"
-                  value={formData.bitrate}
-                  onChange={handleChange}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none font-mono"
                 />
               </div>
             </div>
           </div>
 
-          {/* Text Overlay Style */}
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+          {/* Audio Normalization */}
+          <div className="glass-panel p-6 rounded-3xl border border-indigo-500/20 space-y-4">
             <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
-              <Eye className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-bold text-white text-md">9:16 Text Overlay Style</h3>
+              <Volume2 className="w-5 h-5 text-indigo-400" />
+              <h3 className="font-bold text-white text-md">Audio & Loudness Control</h3>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-900/80 border border-gray-800 rounded-2xl">
+              <div>
+                <span className="block text-sm font-bold text-white">EBU R128 Audio Normalization</span>
+                <span className="text-xs text-gray-400">Automatically balances and normalizes audio levels for crisp Shorts/TikTok playback</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="normalize_audio"
+                  checked={formData.normalize_audio}
+                  onChange={handleChange}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* Attention Hook & Watermark Branding */}
+          <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
+            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <h3 className="font-bold text-white text-md">Auto-Hook Banner & Channel Watermark</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Font File</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">3-Second Hook Text</label>
                 <input
                   type="text"
-                  name="overlay_font"
-                  value={formData.overlay_font}
+                  name="hook_text"
+                  value={formData.hook_text}
                   onChange={handleChange}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-yellow-300 font-bold focus:border-purple-400 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Font Size (px)</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">Watermark Handle</label>
                 <input
-                  type="number"
-                  name="overlay_size"
-                  value={formData.overlay_size}
+                  type="text"
+                  name="watermark_handle"
+                  value={formData.watermark_handle}
                   onChange={handleChange}
-                  min="20"
-                  max="120"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-cyan-300 font-mono focus:border-purple-400 focus:outline-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Top Padding (px)</label>
-                <input
-                  type="number"
-                  name="top_padding"
-                  value={formData.top_padding}
-                  onChange={handleChange}
-                  min="50"
-                  max="400"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Outline Width (px)</label>
-                <input
-                  type="number"
-                  name="overlay_outline_width"
-                  value={formData.overlay_outline_width}
-                  onChange={handleChange}
-                  min="0"
-                  max="20"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Show/Hide Movie Title Toggle */}
-              <div className="sm:col-span-2 flex items-center justify-between p-4 bg-gray-900/80 border border-gray-800 rounded-xl">
+              <div className="flex items-center justify-between p-3.5 bg-gray-900/80 border border-gray-800 rounded-xl">
                 <div>
-                  <span className="block text-sm font-bold text-white">Show Movie Title in Overlay</span>
-                  <span className="text-xs text-gray-400">Display full movie name above the Part number on top of vertical clips</span>
+                  <span className="block text-xs font-bold text-white">Enable 3-Second Hook Text</span>
+                  <span className="text-[11px] text-gray-400">Shows yellow attention text during first 3s of clip</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    name="show_movie_title"
-                    checked={formData.show_movie_title}
+                    name="enable_hook_text"
+                    checked={formData.enable_hook_text}
                     onChange={handleChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Social Media & Auto-Upload Accounts */}
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
-              <span className="text-xl">🚀</span>
-              <h3 className="font-bold text-white text-md">Social Media Connections</h3>
-            </div>
-            <p className="text-xs text-gray-400">Connect your short-form video channels for automated auto-publishing</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {/* YouTube Shorts */}
-              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-bold text-xs">
-                    YT
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">YouTube Shorts</h4>
-                    <span className="text-[10px] text-emerald-400 font-semibold">● Connected (@CinemaClips)</span>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="auto_publish_youtube"
-                    checked={formData.auto_publish_youtube}
-                    onChange={handleChange}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
               </div>
 
-              {/* TikTok */}
-              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs">
-                    TT
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">TikTok</h4>
-                    <span className="text-[10px] text-emerald-400 font-semibold">● Connected (@ShortsForge)</span>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="auto_publish_tiktok"
-                    checked={formData.auto_publish_tiktok}
-                    onChange={handleChange}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-
-              {/* Instagram Reels */}
-              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-lg bg-pink-600/20 text-pink-400 border border-pink-500/30 flex items-center justify-center font-bold text-xs">
-                    IG
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">Instagram Reels</h4>
-                    <span className="text-[10px] text-gray-500 font-semibold">Disconnected</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => alert('Instagram Graph API authorization initialized')}
-                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-                >
-                  Connect
-                </button>
-              </div>
-
-              {/* Facebook Reels */}
-              <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs">
-                    FB
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">Facebook Reels</h4>
-                    <span className="text-[10px] text-gray-500 font-semibold">Disconnected</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => alert('Facebook Reels API authorization initialized')}
-                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-                >
-                  Connect
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Telegram Bot & Auto-Ingestion */}
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
-              <span className="text-xl">✈️</span>
-              <h3 className="font-bold text-white text-md">Telegram Bot & Auto-Ingestion</h3>
-            </div>
-            <p className="text-xs text-gray-400">Configure your Telegram Bot token to directly download videos sent in Telegram channels or private chats</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Telegram Bot Token</label>
-                <input
-                  type="password"
-                  name="telegram_bot_token"
-                  value={formData.telegram_bot_token}
-                  onChange={handleChange}
-                  placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Allowed Telegram Chat / Channel ID</label>
-                <input
-                  type="text"
-                  name="telegram_chat_id"
-                  value={formData.telegram_chat_id}
-                  onChange={handleChange}
-                  placeholder="-100123456789"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div className="sm:col-span-2 flex items-center justify-between p-3.5 bg-gray-900/80 border border-gray-800 rounded-xl">
+              <div className="flex items-center justify-between p-3.5 bg-gray-900/80 border border-gray-800 rounded-xl">
                 <div>
-                  <span className="block text-xs font-bold text-white">Auto-Download Incoming Telegram Videos</span>
-                  <span className="text-[11px] text-gray-400">Automatically download any movie files sent to your Telegram Bot directly into input folder</span>
+                  <span className="block text-xs font-bold text-white">Enable Channel Watermark</span>
+                  <span className="text-[11px] text-gray-400">Displays handle watermark in bottom-right corner</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    name="telegram_auto_download"
-                    checked={formData.telegram_auto_download}
+                    name="enable_watermark"
+                    checked={formData.enable_watermark}
                     onChange={handleChange}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                 </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Upload Schedule & Automation Settings */}
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-            <div className="flex items-center space-x-2 pb-3 border-b border-gray-800">
-              <span className="text-xl">⏰</span>
-              <h3 className="font-bold text-white text-md">Upload Schedule & Automation</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Upload Schedule Strategy</label>
-                <select
-                  name="upload_schedule"
-                  value={formData.upload_schedule}
-                  onChange={handleChange}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                >
-                  <option value="immediate">Immediate (Publish clip as soon as rendered)</option>
-                  <option value="custom_interval">Staggered Interval (Delay between clips)</option>
-                  <option value="hourly">Hourly Batch</option>
-                  <option value="daily">Daily Prime-time Batch (6:00 PM UTC)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1">Interval Delay Between Clips (Minutes)</label>
-                <input
-                  type="number"
-                  name="upload_interval_mins"
-                  value={formData.upload_interval_mins}
-                  onChange={handleChange}
-                  min="5"
-                  max="1440"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                />
               </div>
             </div>
           </div>
@@ -419,23 +256,33 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center space-x-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/30 transition-all"
+              className="flex items-center space-x-2 px-8 py-3.5 rounded-xl font-extrabold text-sm text-white bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 shadow-xl shadow-cyan-500/30 transition-all transform hover:scale-105"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Saving Changes...' : 'Save System Settings'}</span>
+              <span>{saving ? 'Saving Settings...' : 'Save Studio Engine Settings'}</span>
             </button>
           </div>
         </form>
 
         {/* Live Visualizer for Shorts Safe Area & Overlay */}
-        <div className="glass-panel p-6 rounded-2xl border border-gray-800 flex flex-col items-center">
-          <h3 className="font-bold text-white text-md mb-2">Overlay Visualizer (9:16)</h3>
-          <p className="text-xs text-gray-400 mb-4 text-center">Live preview of text layout & safe area guidelines</p>
+        <div className="glass-panel p-6 rounded-3xl border border-cyan-500/20 flex flex-col items-center">
+          <h3 className="font-bold text-white text-md mb-2 flex items-center space-x-2">
+            <Eye className="w-4 h-4 text-cyan-400" />
+            <span>Live 9:16 Studio Mockup</span>
+          </h3>
+          <p className="text-xs text-gray-400 mb-4 text-center">Preview layout, crop style & watermark placement</p>
 
           {/* Mock Vertical Phone Frame */}
-          <div className="relative w-56 h-96 bg-gray-900 rounded-3xl border-4 border-gray-700 shadow-2xl overflow-hidden flex flex-col justify-between p-4">
-            {/* Blurred background mockup */}
-            <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/40 via-purple-900/30 to-black pointer-events-none" />
+          <div className="relative w-56 h-96 bg-gray-950 rounded-3xl border-4 border-cyan-500/40 shadow-2xl shadow-cyan-500/20 overflow-hidden flex flex-col justify-between p-4">
+            {/* Background mockup based on crop mode */}
+            {formData.crop_mode === 'split_screen' ? (
+              <div className="absolute inset-0 flex flex-col pointer-events-none">
+                <div className="h-1/2 bg-indigo-900/40 border-b border-cyan-500/30 flex items-center justify-center text-[10px] text-cyan-300">Movie Stream (Top)</div>
+                <div className="h-1/2 bg-purple-900/30 flex items-center justify-center text-[10px] text-purple-300">ASMR / Pad Stream (Bottom)</div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-b from-cyan-950/40 via-purple-950/30 to-black pointer-events-none" />
+            )}
 
             {/* Overlay Title */}
             <div
@@ -448,12 +295,25 @@ export default function SettingsPage() {
               }}
             >
               {formData.show_movie_title && <div>MOVIE NAME</div>}
-              <div className={formData.show_movie_title ? "mt-2" : ""}>PART 1</div>
+              <div className={formData.show_movie_title ? "mt-1" : ""}>PART 1</div>
+
+              {formData.enable_hook_text && (
+                <div className="mt-2 text-[10px] font-black text-yellow-300 tracking-normal border border-yellow-400/40 bg-yellow-950/60 rounded px-1 py-0.5">
+                  {formData.hook_text}
+                </div>
+              )}
             </div>
 
-            {/* Shorts UI Safe Area Indicator */}
-            <div className="relative z-10 border border-dashed border-indigo-400/40 rounded-lg p-2 text-center text-[9px] text-indigo-300 bg-indigo-950/40">
-              Shorts UI Safe Area Zone
+            {/* Watermark handle in safe area */}
+            <div className="relative z-10 flex justify-between items-end">
+              <div className="border border-dashed border-cyan-400/40 rounded p-1 text-center text-[8px] text-cyan-300 bg-cyan-950/40">
+                Safe Zone
+              </div>
+              {formData.enable_watermark && (
+                <div className="text-[9px] font-mono text-cyan-300 font-bold bg-black/60 px-1.5 py-0.5 rounded">
+                  {formData.watermark_handle}
+                </div>
+              )}
             </div>
           </div>
         </div>

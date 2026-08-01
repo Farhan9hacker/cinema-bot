@@ -30,8 +30,10 @@ class Settings(BaseSettings):
     DEFAULT_BITRATE: str = "6M"
     DEFAULT_FPS: int = 30
     DEFAULT_RESOLUTION: str = "1080x1920"
+    DEFAULT_CROP_MODE: str = "blur_pad"  # blur_pad, center_crop, split_screen
+    DEFAULT_NORMALIZE_AUDIO: bool = True
     
-    # Text Overlay Defaults
+    # Text Overlay & Branding Defaults
     DEFAULT_OVERLAY_FONT: str = "DejaVuSans-Bold.ttf"
     DEFAULT_OVERLAY_SIZE: int = 54
     DEFAULT_OVERLAY_COLOR: str = "white"
@@ -39,6 +41,12 @@ class Settings(BaseSettings):
     DEFAULT_OVERLAY_OUTLINE_WIDTH: int = 4
     DEFAULT_TOP_PADDING: int = 120
     DEFAULT_SHOW_MOVIE_TITLE: bool = True
+    DEFAULT_HOOK_TEXT: str = "MUST WATCH ENDING 🍿"
+    DEFAULT_ENABLE_HOOK_TEXT: bool = True
+    DEFAULT_WATERMARK_HANDLE: str = "@ShortForgeClips"
+    DEFAULT_ENABLE_WATERMARK: bool = True
+    DEFAULT_THEME: str = "cyberpunk"
+    
     DEFAULT_UPLOAD_SCHEDULE: str = "immediate"
     DEFAULT_UPLOAD_INTERVAL_MINS: int = 30
     DEFAULT_AUTO_PUBLISH_YOUTUBE: bool = True

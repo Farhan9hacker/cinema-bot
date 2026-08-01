@@ -72,6 +72,8 @@ class SettingsSchema(BaseModel):
     bitrate: str = Field(default="6M", description="Video bitrate e.g. 6M")
     resolution: str = Field(default="1080x1920", description="Output vertical resolution e.g. 1080x1920")
     fps: int = Field(default=30, description="Target frame rate")
+    crop_mode: str = Field(default="blur_pad", description="Crop style: blur_pad, center_crop, split_screen")
+    normalize_audio: bool = Field(default=True, description="EBU R128 audio loudness normalization")
     overlay_font: str = Field(default="DejaVuSans-Bold.ttf", description="Font filename or system font")
     overlay_size: int = Field(default=54, description="Font size in pixels")
     overlay_color: str = Field(default="white", description="Text color")
@@ -79,6 +81,11 @@ class SettingsSchema(BaseModel):
     overlay_outline_width: int = Field(default=4, description="Outline border width")
     top_padding: int = Field(default=120, description="Top padding from screen top")
     show_movie_title: bool = Field(default=True, description="Show movie title text on overlay")
+    hook_text: str = Field(default="MUST WATCH ENDING 🍿", description="3-second top hook overlay text")
+    enable_hook_text: bool = Field(default=True, description="Enable 3-second attention hook")
+    watermark_handle: str = Field(default="@ShortForgeClips", description="Watermark channel handle")
+    enable_watermark: bool = Field(default=True, description="Enable watermark handle overlay")
+    active_theme: str = Field(default="cyberpunk", description="UI Theme: cyberpunk, midnight, emerald")
     upload_schedule: str = Field(default="immediate", description="Upload schedule: immediate, hourly, daily, custom_interval")
     upload_interval_mins: int = Field(default=30, description="Delay between clip uploads in minutes")
     auto_publish_youtube: bool = Field(default=True, description="Auto-publish to YouTube Shorts")
@@ -102,6 +109,8 @@ class SettingsUpdateSchema(BaseModel):
     bitrate: Optional[str] = None
     resolution: Optional[str] = None
     fps: Optional[int] = None
+    crop_mode: Optional[str] = None
+    normalize_audio: Optional[bool] = None
     overlay_font: Optional[str] = None
     overlay_size: Optional[int] = None
     overlay_color: Optional[str] = None
@@ -109,6 +118,11 @@ class SettingsUpdateSchema(BaseModel):
     overlay_outline_width: Optional[int] = None
     top_padding: Optional[int] = None
     show_movie_title: Optional[bool] = None
+    hook_text: Optional[str] = None
+    enable_hook_text: Optional[bool] = None
+    watermark_handle: Optional[str] = None
+    enable_watermark: Optional[bool] = None
+    active_theme: Optional[str] = None
     upload_schedule: Optional[str] = None
     upload_interval_mins: Optional[int] = None
     auto_publish_youtube: Optional[bool] = None
