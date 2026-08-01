@@ -31,6 +31,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://shortforge:shortforge_pass@postgres:5432/shortforge
       - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=8857789104:AAEIMVnt6Loea1zSUgcnPuOBDJejn8RC48A
       - INPUT_DIR=/app/input
       - PROCESSING_DIR=/app/processing
       - OUTPUT_DIR=/app/output
@@ -60,6 +61,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://shortforge:shortforge_pass@postgres:5432/shortforge
       - REDIS_URL=redis://redis:6379/0
+      - TELEGRAM_BOT_TOKEN=8857789104:AAEIMVnt6Loea1zSUgcnPuOBDJejn8RC48A
       - INPUT_DIR=/app/input
       - PROCESSING_DIR=/app/processing
       - OUTPUT_DIR=/app/output

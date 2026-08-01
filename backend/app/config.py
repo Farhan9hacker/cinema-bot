@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     DEFAULT_AUTO_PUBLISH_FACEBOOK: bool = False
     
     # Telegram Ingestion Defaults
-    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_TOKEN: str = "8857789104:AAEIMVnt6Loea1zSUgcnPuOBDJejn8RC48A"
     TELEGRAM_CHAT_ID: str = ""
     TELEGRAM_AUTO_DOWNLOAD: bool = True
     
