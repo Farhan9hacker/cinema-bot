@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     libpq-dev \
     gcc \
+    libc-dev \
+    build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
